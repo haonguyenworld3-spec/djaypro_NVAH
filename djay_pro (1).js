@@ -1,59 +1,58 @@
-// BUY HÀO NGUYỄN - UPDATED FOR NEW REVENUECAT API
-const now = new Date();
-const nowIso = now.toISOString();
+/***********************************************
+* App: djay Pro (Algoriddim)
+* Function: Mở khóa gói Pro (RevenueCat Bypass)
+* Dựa trên log API: api.revenuecat.com[cite: 1]
+***********************************************/
 
-if ($response && $response.body) {
-  try {
-    let obj = JSON.parse($response.body);
-    
-    // Cấu trúc bổ sung cho API mới (Sửa đổi trực tiếp ở tầng gốc hoặc tầng subscriber)
-    const entitlementsData = {
-      "pro": {
-        "expires_date": "2099-12-31T23:59:59Z",
-        "grace_period_expires_date": null,
-        "product_identifier": "com.algoriddim.djay.pro.yearly",
-        "purchase_date": "2024-01-01T00:00:00Z"
-      }
-    };
+const ua = $request.headers['User-Agent'] || $request.headers['user-agent'] || '';
 
-    const subscriptionsData = {
-      "com.algoriddim.djay.pro.yearly": {
-        "auto_resume_date": null,
-        "billing_issues_detected_at": null,
-        "expires_date": "2099-12-31T23:59:59Z",
+if (ua.includes('djay')) {
+    let body = {};
+    try {
+        body = JSON.parse($response.body);
+    } catch (e) {
+        // Nếu response không phải JSON hợp lệ thì bỏ qua
+        $done({});
+        return;
+    }
+
+    // Đảm bảo cấu trúc dữ liệu subscriber tồn tại
+    if (!body.subscriber) {
+        body.subscriber = {};
+    }
+    if (!body.subscriber.entitlements) {
+        body.subscriber.entitlements = {};
+    }
+    if (!body.subscriber.subscriptions) {
+        body.subscriber.subscriptions = {};
+    }
+
+    // Cấu hình quyền lợi Pro vĩnh viễn
+    const proEntitlement = {
         "grace_period_expires_date": null,
-        "is_sandbox": false,
-        "original_purchase_date": "2024-01-01T00:00:00Z",
-        "ownership_type": "PURCHASED",
-        "period_type": "normal",
         "purchase_date": "2024-01-01T00:00:00Z",
-        "refunded_at": null,
-        "store": "app_store",
-        "store_transaction_id": "1000000123456789",
-        "unsubscribe_detected_at": null
-      }
+        "product_identifier": "com.algoriddim.djay.pro.sub.yearly",
+        "expires_date": "2099-12-31T23:59:59Z"
     };
 
-    // 1. Gán cho cấu trúc API Cũ (Nếu app vẫn gọi cổng cũ)
-    if (obj.subscriber) {
-      obj.subscriber.entitlements = Object.assign(obj.subscriber.entitlements || {}, entitlementsData);
-      obj.subscriber.subscriptions = Object.assign(obj.subscriber.subscriptions || {}, subscriptionsData);
-    }
-    
-    // 2. Gán cho cấu trúc API Mới (Dành cho bản v5.6.x mới)
-    if (obj.entitlements || obj.subscriptions) {
-      obj.entitlements = Object.assign(obj.entitlements || {}, entitlementsData);
-      obj.subscriptions = Object.assign(obj.subscriptions || {}, subscriptionsData);
-    } else {
-      // Ép tạo mới nếu gói tin trả về trống
-      obj.entitlements = entitlementsData;
-      obj.subscriptions = subscriptionsData;
-    }
+    const proSubscription = {
+        "is_sandbox": false,
+        "ownership_type": "PURCHASED",
+        "billing_issues_detected_at": null,
+        "period_type": "normal",
+        "expires_date": "2099-12-31T23:59:59Z",
+        "grace_period_expires_date": null,
+        "unsubscribe_detected_at": null,
+        "original_purchase_date": "2024-01-01T00:00:00Z",
+        "purchase_date": "2024-01-01T00:00:00Z",
+        "store": "app_store"
+    };
 
-    $done({ body: JSON.stringify(obj) });
-  } catch (e) {
-    $done({});
-  }
+    // Gán quyền Pro vào các trường dữ liệu của RevenueCat
+    body.subscriber.entitlements["pro"] = proEntitlement;
+    body.subscriber.subscriptions["com.algoriddim.djay.pro.sub.yearly"] = proSubscription;
+
+    $done({ body: JSON.stringify(body) });
 } else {
-  $done({});
+    $done({});
 }
